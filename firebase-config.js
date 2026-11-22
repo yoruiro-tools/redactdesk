@@ -34,7 +34,7 @@ export const firebaseConfig = {
 // You may also pin a pre-registered token in `debugToken`.
 export const appCheckConfig = {
   recaptchaEnterpriseSiteKey: "6LeSiSwuAAAAAHqHsR-RFmbwjJnxnVXpEiC4CzKd",
-  useDebugToken: true,
+  useDebugToken: false,
   debugToken: "", // optional: a pre-registered debug token (UUID string)
 };
 
