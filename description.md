@@ -72,9 +72,12 @@ model API is called.**
 
 ## Try it
 
-The repository ships in **mock mode**: with placeholder values in
-`firebase-config.js`, a built-in local simulator runs the complete
-pipeline — redaction, summary, mode badges, inference log — and can even
-simulate "on-device unavailable" to demonstrate the disclosed cloud
-fallback. Add a real Firebase config and an App Check site key, and the
-identical UI goes live on Firebase AI Logic.
+- **Live demo:** https://yoruiro-hybrid-ai.web.app
+- **Source:** https://github.com/yoruiro-tools/redactdesk
+
+The live demo runs against a real Firebase project with Firebase AI Logic
+and App Check (Fraud Defense) enabled. If the Firebase config is removed
+or left as placeholders, the identical UI automatically drops into a
+built-in local simulator ("mock mode") that runs the complete pipeline —
+redaction, summary, mode badges, inference log — and can even simulate
+"on-device unavailable" to demonstrate the disclosed cloud fallback.

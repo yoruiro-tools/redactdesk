@@ -2,6 +2,10 @@
 
 **Sensitive data never leaves the device unprotected.**
 
+**Live demo:** https://yoruiro-hybrid-ai.web.app — running on a real
+Firebase project with Firebase AI Logic and App Check enabled.
+Built for the **#BuildHybridAI 2026** hackathon on Devpost.
+
 RedactDesk is a text-processing assistant for freelancers and small
 businesses who paste client documents — invoice memos, receipt
 transcriptions, client emails — into AI tools every day, and who currently
