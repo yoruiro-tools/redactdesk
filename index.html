@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RedactDesk — Hybrid Privacy Assistant for Freelancers</title>
+  <meta name="description" content="Sensitive data never leaves the device unprotected. On-device redaction with Firebase AI Logic hybrid inference, then cloud summarization of the redacted text only." />
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Firebase JS SDK (modular) via the official CDN, wired through an import map.
+       firebase/ai provides Firebase AI Logic, including hybrid inference. -->
+  <script type="importmap">
+  {
+    "imports": {
+      "firebase/app": "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js",
+      "firebase/ai": "https://www.gstatic.com/firebasejs/12.5.0/firebase-ai.js",
+      "firebase/app-check": "https://www.gstatic.com/firebasejs/12.5.0/firebase-app-check.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">RD</div>
+      <div>
+        <h1>RedactDesk</h1>
+        <p class="tagline">Hybrid privacy assistant for freelancers &amp; small businesses</p>
+      </div>
+    </div>
+    <div class="status-cluster">
+      <div class="status-item">
+        <span class="status-label">Inference mode</span>
+        <span id="modeBadge" class="badge badge-idle">IDLE</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Connection</span>
+        <span id="connBadge" class="badge badge-mock">MOCK MODE</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">App Check</span>
+        <span id="appCheckBadge" class="badge badge-idle">NOT CONFIGURED</span>
+      </div>
+    </div>
+  </header>
+
+  <div id="fallbackBanner" class="banner banner-warn hidden" role="alert"></div>
+  <div id="mockBanner" class="banner banner-info">
+    <strong>Mock mode.</strong> No Firebase config was detected, so both steps run
+    against a local simulator. Paste real values into <code>firebase-config.js</code>
+    to go live — the UI, mode badges, fallback flow and log stay exactly the same.
+    <label class="mock-toggle">
+      <input type="checkbox" id="mockOnDeviceToggle" checked />
+      Simulate on-device model available
+    </label>
+  </div>
+
+  <main class="layout">
+    <!-- ── Input ─────────────────────────────────────────────────────────── -->
+    <section class="panel input-panel">
+      <h2>1 · Paste a document</h2>
+      <p class="hint">
+        Invoice memos, receipt transcriptions, client emails — anything with
+        names, addresses, account numbers or amounts you would rather not
+        upload raw.
+      </p>
+      <div class="sample-row">
+        <span class="sample-label">Try a sample:</span>
+        <button type="button" class="btn btn-ghost" data-sample="invoice">Invoice memo</button>
+        <button type="button" class="btn btn-ghost" data-sample="email">Client email</button>
+        <button type="button" class="btn btn-ghost" data-sample="receipt">Receipt</button>
+      </div>
+      <textarea id="inputText" rows="14" spellcheck="false"
+        placeholder="Paste your text here…"></textarea>
+      <div class="input-actions">
+        <button type="button" id="processBtn" class="btn btn-primary">Redact &amp; summarize</button>
+        <button type="button" id="clearBtn" class="btn btn-ghost">Clear</button>
+        <span id="charCount" class="char-count">0 characters</span>
+      </div>
+      <ul class="privacy-points">
+        <li><strong>Step 1 runs on-device first</strong> (Gemini Nano via Chrome's Prompt API, through Firebase AI Logic <code>PREFER_ON_DEVICE</code>) and replaces sensitive spans with tokens like <code>[NAME_1]</code>.</li>
+        <li><strong>Only the redacted text</strong> is sent to the cloud step. The raw document is never uploaded when on-device inference is available.</li>
+        <li>If on-device inference is unavailable, the app falls back to the cloud and <strong>tells you, in plain sight</strong> — no silent uploads.</li>
+      </ul>
+    </section>
+
+    <!-- ── Results ───────────────────────────────────────────────────────── -->
+    <section class="results">
+      <article class="panel step-panel" id="step1Panel">
+        <div class="step-head">
+          <h2>2 · Redaction</h2>
+          <span class="badge badge-idle" data-step-badge="1">NOT RUN</span>
+        </div>
+        <p class="hint">Sensitive spans detected and masked. This is the <em>only</em> version of your text that may leave the device.</p>
+        <div id="entityList" class="entity-list empty">No entities detected yet.</div>
+        <pre id="redactedOutput" class="output-box">The redacted text will appear here.</pre>
+        <div class="step-actions">
+          <button type="button" class="btn btn-ghost" id="copyRedactedBtn" disabled>Copy redacted text</button>
+        </div>
+      </article>
+
+      <article class="panel step-panel" id="step2Panel">
+        <div class="step-head">
+          <h2>3 · Summary &amp; next actions <span class="cloud-note">(cloud, redacted text only)</span></h2>
+          <span class="badge badge-idle" data-step-badge="2">NOT RUN</span>
+        </div>
+        <div class="result-block">
+          <h3>Summary</h3>
+          <p id="summaryOutput" class="output-text">—</p>
+        </div>
+        <div class="result-block">
+          <h3>Cleaned-up version</h3>
+          <pre id="cleanedOutput" class="output-box">—</pre>
+        </div>
+        <div class="result-block">
+          <h3>Suggested next actions</h3>
+          <ul id="actionsOutput" class="actions-list"><li>—</li></ul>
+        </div>
+        <div class="step-actions">
+          <button type="button" class="btn btn-ghost" id="copySummaryBtn" disabled>Copy summary</button>
+        </div>
+      </article>
+
+      <article class="panel log-panel">
+        <div class="step-head">
+          <h2>Inference log</h2>
+          <button type="button" class="btn btn-ghost btn-small" id="clearLogBtn">Clear log</button>
+        </div>
+        <p class="hint">Every run records which mode was requested, where inference actually executed, and whether a fallback happened. Source: Firebase AI Logic <code>response.inferenceSource</code>.</p>
+        <div id="logOutput" class="log-box" aria-live="polite">
+          <p class="log-empty">No inference runs yet.</p>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>
+      Built with <strong>Firebase AI Logic</strong> hybrid inference
+      (on-device Gemini Nano via the Chrome Prompt API + cloud Gemini),
+      protected by <strong>Firebase App Check</strong>.
+      No other model API is called. Your raw text stays in this tab —
+      nothing is stored server-side by this app.
+    </p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

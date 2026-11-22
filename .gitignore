@@ -1,0 +1,14 @@
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Local environment / editor
+.env
+.env.*
+!.env.example
+.DS_Store
+node_modules/
+.vscode/
+.idea/
